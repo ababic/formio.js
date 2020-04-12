@@ -30,8 +30,6 @@ export default class WebformBuilder extends Component {
     super(null, options);
 
     this.element = element;
-
-    this.builderHeight = 0;
     this.schemas = {};
 
     this.sideBarScroll = _.get(this.options, 'sideBarScroll', true);
@@ -830,14 +828,6 @@ export default class WebformBuilder extends Component {
     });
   }
 
-  setForm(form) {
-    this.emit('change', form);
-    return super.setForm(form).then(retVal => {
-      setTimeout(() => (this.builderHeight = this.refs.form.offsetHeight), 200);
-      return retVal;
-    });
-  }
-
   populateRecaptchaSettings(form) {
     //populate isEnabled for recaptcha form settings
     var isRecaptchaEnabled = false;
@@ -1017,20 +1007,24 @@ export default class WebformBuilder extends Component {
     if (index !== -1) {
       let submissionData = this.editForm.submission.data;
       submissionData = submissionData.componentJson || submissionData;
+      let comp = null;
+      parentComponent.getComponents().forEach((component) => {
+        if (component.key === original.key) {
+          comp = component;
+        }
+      });
       if (parentContainer) {
         parentContainer[index] = submissionData;
+        if (comp) {
+          comp.component = submissionData;
+        }
       }
       else if (parentComponent && parentComponent.saveChildComponent) {
         parentComponent.saveChildComponent(submissionData);
       }
       const rebuild = parentComponent.rebuild() || NativePromise.resolve();
       return rebuild.then(() => {
-        let schema = parentContainer ? parentContainer[index] : [];
-        parentComponent.getComponents().forEach((component) => {
-          if (component.key === schema.key) {
-            schema = component.schema;
-          }
-        });
+        const schema = comp ? comp.schema : (parentContainer ? parentContainer[index] : []);
         this.emit('saveComponent',
           schema,
           component,
